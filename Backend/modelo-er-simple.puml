@@ -1,0 +1,48 @@
+@startuml ModeloER_Simple
+!theme plain
+hide circle
+skinparam linetype ortho
+skinparam roundcorner 12
+skinparam shadowing false
+
+skinparam entity {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontSize 16
+  FontStyle bold
+}
+skinparam ArrowColor #334155
+skinparam ArrowFontSize 12
+
+title Modelo Entidad-Relación — Vista General
+
+left to right direction
+
+entity "Cliente" as Cliente
+entity "Usuario" as Usuario
+entity "Rol" as Rol
+entity "Parametro" as Parametro
+
+entity "Escenario" as Escenario
+entity "Seccion" as Seccion
+entity "Fila" as Fila
+entity "Asiento" as Asiento
+entity "Evento" as Evento
+
+entity "Reserva" as Reserva
+entity "Ticket" as Ticket
+
+Cliente ||--|| Usuario     : 1 a 1
+Usuario }o--o{ Rol         : N a N
+
+Escenario ||--o{ Seccion   : 1 a N
+Seccion   ||--o{ Fila      : 1 a N
+Fila      ||--o{ Asiento   : 1 a N
+Escenario ||--o{ Evento    : 1 a N
+
+Usuario ||--o{ Reserva     : 1 a N
+Evento  ||--o{ Reserva     : 1 a N
+Reserva ||--o{ Ticket      : 1 a N
+Asiento ||--o{ Ticket      : 1 a N
+
+@enduml

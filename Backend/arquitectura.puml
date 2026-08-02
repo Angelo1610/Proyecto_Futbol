@@ -1,0 +1,66 @@
+@startuml Arquitectura_SistemaReservasFutbol
+!theme plain
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment center
+
+skinparam component {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontSize 13
+}
+skinparam database {
+  BackgroundColor #FEF9C3
+  BorderColor #92400E
+}
+skinparam actor {
+  BackgroundColor #DBEAFE
+  BorderColor #1D4ED8
+}
+skinparam note {
+  BackgroundColor #ECFDF5
+  BorderColor #059669
+}
+
+title Arquitectura de Microservicios — Sistema de Reservas de Partidos de Fútbol
+
+actor "Cliente /\nAdministrador" as User
+
+package "Frontend" as PkgFrontend {
+  component "Aplicación Web\n(React + Vite)\nlocalhost:5173" as Frontend
+}
+
+package "Backend (microservicios independientes)" as PkgBackend {
+
+  component "master-ms\n(Spring Boot)\nlocalhost:8080\n\nUsuarios · Roles · Login\nJWT · Parámetros" as MasterMS
+  database "PostgreSQL\nms-usuarios" as MasterDB
+
+  component "eventos-ms\n(NestJS)\nlocalhost:3000\n\nEstadios · Secciones\nFilas · Asientos · Partidos" as EventosMS
+  database "MySQL\neventos_db" as EventosDB
+
+  component "reservas-ms\n(NestJS)\nlocalhost:3001\n\nReservas · Tickets\nReportes PDF" as ReservasMS
+  database "MySQL\nreservas_db" as ReservasDB
+}
+
+User --> Frontend : usa
+
+Frontend --> MasterMS   : REST\n(login, usuarios, roles)
+Frontend --> EventosMS  : REST\n(consulta partidos y asientos)
+Frontend --> ReservasMS : REST\n(reservar, cancelar, reportes)
+
+ReservasMS --> EventosMS : REST\n(valida y actualiza\ndisponibilidad de asientos)
+
+MasterMS   --> MasterDB
+EventosMS  --> EventosDB
+ReservasMS --> ReservasDB
+
+note bottom of MasterMS
+  Emite el JWT (con roles incluidos).
+  eventos-ms y reservas-ms lo
+  validan localmente con la misma
+  clave — sin llamarse entre sí
+  para cada petición.
+end note
+
+@enduml

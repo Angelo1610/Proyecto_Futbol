@@ -1,0 +1,229 @@
+### =========================================================
+### Sistema de reservas de tickets de fútbol — colección .http
+### Compatible con la extensión "REST Client" de VS Code
+### o con `curl --config` adaptando cada bloque.
+### =========================================================
+
+@eventosUrl = http://localhost:3000
+@masterUrl = http://localhost:8080
+@reservasUrl = http://localhost:3001
+
+### =========================================================
+### MASTER-MS (usuarios, roles, auth) — puerto 8080
+### =========================================================
+
+### Login (usuario con ambos roles, ya sembrado por DataSeeder)
+# @name login
+POST {{masterUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "mixto@espe.edu.ec",
+  "password": "password123"
+}
+
+### Guarda el accessToken de la respuesta anterior para las siguientes llamadas
+@accessToken = {{login.response.body.accessToken}}
+@refreshToken = {{login.response.body.refreshToken}}
+@userId = {{login.response.body.user.id}}
+
+### Refresh token
+POST {{masterUrl}}/api/auth/refresh
+Authorization: Bearer {{refreshToken}}
+
+### Logout (revoca todos los tokens del usuario)
+POST {{masterUrl}}/api/auth/logout
+Authorization: Bearer {{accessToken}}
+
+### Listar roles disponibles
+GET {{masterUrl}}/api/v1/roles
+Authorization: Bearer {{accessToken}}
+
+### Listar usuarios
+GET {{masterUrl}}/api/v1/users/
+Authorization: Bearer {{accessToken}}
+
+### Obtener un usuario por id
+GET {{masterUrl}}/api/v1/users/{{userId}}
+Authorization: Bearer {{accessToken}}
+
+### Crear usuario (Registro)
+POST {{masterUrl}}/api/v1/users/
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "dni": "1712345678",
+  "firstName": "Ana",
+  "middleName": "",
+  "lastName": "Torres",
+  "email": "ana.torres@example.com",
+  "phone": "0998765432",
+  "address": "Av. Siempre Viva 123",
+  "nationality": "Ecuatoriana"
+}
+
+### Editar usuario
+PATCH {{masterUrl}}/api/v1/users/{{userId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "phone": "0987001122"
+}
+
+### Asignar rol a usuario
+# reemplaza :roleId por un id real obtenido de GET /api/v1/roles
+POST {{masterUrl}}/api/v1/users/{{userId}}/roles/REEMPLAZAR_ROLE_ID
+Authorization: Bearer {{accessToken}}
+
+### Quitar rol a usuario
+DELETE {{masterUrl}}/api/v1/users/{{userId}}/roles/REEMPLAZAR_ROLE_ID
+Authorization: Bearer {{accessToken}}
+
+### Eliminar usuario
+DELETE {{masterUrl}}/api/v1/users/REEMPLAZAR_USER_ID
+Authorization: Bearer {{accessToken}}
+
+
+### =========================================================
+### EVENTOS-MS (catálogo: evento/escenario/seccion/fila/asiento) — puerto 3000
+### =========================================================
+
+### Listar eventos (catálogo del cliente)
+GET {{eventosUrl}}/evento
+
+### Detalle de un evento (con escenario/secciones/filas/asientos)
+# @name eventoDetalle
+GET {{eventosUrl}}/evento/REEMPLAZAR_EVENTO_ID
+
+### Config de zonas (multiplicadores usados por StadiumManagement)
+GET {{eventosUrl}}/config/zonas
+
+### Editar multiplicador de una zona
+PATCH {{eventosUrl}}/config/zonas/palcos
+Content-Type: application/json
+
+{
+  "multiplicador": 2.8
+}
+
+### Crear escenario
+# @name crearEscenario
+POST {{eventosUrl}}/escenario
+Content-Type: application/json
+
+{
+  "nombre": "Estadio de Prueba",
+  "descripcion": "Estadio creado desde la colección .http",
+  "ubicacion": "Quito, Ecuador",
+  "capacidad": 10000
+}
+
+### Crear evento (usa el id del escenario anterior)
+POST {{eventosUrl}}/evento
+Content-Type: application/json
+
+{
+  "nombre": "Partido de prueba",
+  "descripcion": "Amistoso",
+  "fecha": "2026-12-01",
+  "hora": "20:00:00",
+  "precioBase": 12.5,
+  "imagenUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20",
+  "escenarioId": "REEMPLAZAR_ESCENARIO_ID"
+}
+
+### Editar evento
+PATCH {{eventosUrl}}/evento/REEMPLAZAR_EVENTO_ID
+Content-Type: application/json
+
+{
+  "precioBase": 15.0
+}
+
+### Eliminar evento
+DELETE {{eventosUrl}}/evento/REEMPLAZAR_EVENTO_ID
+
+### Crear sección
+POST {{eventosUrl}}/seccion
+Content-Type: application/json
+
+{
+  "nombre": "General",
+  "descripcion": "Localidad general",
+  "capacidad": 96,
+  "tipo": "general",
+  "multiplicador": 1.0,
+  "escenarioId": "REEMPLAZAR_ESCENARIO_ID"
+}
+
+### Crear fila
+POST {{eventosUrl}}/fila
+Content-Type: application/json
+
+{
+  "nombre": "A",
+  "descripcion": "Fila A",
+  "capacidad": 12,
+  "seccionId": "REEMPLAZAR_SECCION_ID"
+}
+
+### Crear asiento
+POST {{eventosUrl}}/asiento
+Content-Type: application/json
+
+{
+  "numero": "1",
+  "tipo": "normal",
+  "filaId": "REEMPLAZAR_FILA_ID"
+}
+
+### Consultar un asiento puntual
+GET {{eventosUrl}}/asiento/REEMPLAZAR_ASIENTO_ID
+
+### Cambiar estado de un asiento manualmente (lo usa reservas-ms internamente)
+PATCH {{eventosUrl}}/asiento/REEMPLAZAR_ASIENTO_ID
+Content-Type: application/json
+
+{
+  "estado": "disponible"
+}
+
+
+### =========================================================
+### RESERVAS-MS (reserva/ticket/pago) — puerto 3001
+### Flujo completo: reservar -> pagar -> ver ticket
+### =========================================================
+
+### 1. Crear una reserva (usuarioId viene del login de master-ms,
+###    eventoId/asientoIds vienen del catálogo de eventos-ms)
+# @name crearReserva
+POST {{reservasUrl}}/reservas
+Content-Type: application/json
+
+{
+  "usuarioId": "{{userId}}",
+  "eventoId": "REEMPLAZAR_EVENTO_ID",
+  "asientoIds": ["REEMPLAZAR_ASIENTO_ID_1", "REEMPLAZAR_ASIENTO_ID_2"]
+}
+
+### Guarda el id de la reserva creada
+@reservaId = {{crearReserva.response.body.id}}
+
+### 2. Consultar una reserva
+GET {{reservasUrl}}/reservas/{{reservaId}}
+
+### 3. Pagar la reserva (genera los tickets y marca los asientos como vendidos)
+POST {{reservasUrl}}/reservas/{{reservaId}}/pagar
+Content-Type: application/json
+
+{
+  "metodo": "tarjeta"
+}
+
+### 3b. (alternativo) Cancelar una reserva pendiente (libera los asientos)
+POST {{reservasUrl}}/reservas/{{reservaId}}/cancelar
+
+### 4. Ver los tickets del usuario (pantalla "Tickets" del cliente)
+GET {{reservasUrl}}/tickets?usuarioId={{userId}}

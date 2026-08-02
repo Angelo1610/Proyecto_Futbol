@@ -1,0 +1,103 @@
+services:
+  mysql-eventos:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: eventos_db
+    volumes:
+      - mysql_eventos_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-master:
+    image: postgres:16
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: angelo16
+      POSTGRES_DB: ms-usuarios
+    volumes:
+      - postgres_master_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql-reservas:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: reservas_db
+    volumes:
+      - mysql_reservas_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  eventos-ms:
+    build: ./eventos-ms
+    restart: always
+    depends_on:
+      mysql-eventos:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql-eventos
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: root
+      DB_NAME: eventos_db
+      PORT: 3000
+      CORS_ORIGIN: http://localhost:5173
+    ports:
+      - "3000:3000"
+
+  master-ms:
+    build: ./master-ms
+    restart: always
+    depends_on:
+      postgres-master:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres-master
+      DB_PORT: 5432
+      DB_NAME: ms-usuarios
+      DB_USER: postgres
+      DB_PASSWORD: angelo16
+      SERVER_PORT: 8080
+      CORS_ORIGIN: http://localhost:5173
+      JWT_SECRET: tuClaveSecretaDeAlMenos256BitsParaHMACSHA256
+    ports:
+      - "8080:8080"
+
+  reservas-ms:
+    build: ./reservas-ms
+    restart: always
+    depends_on:
+      mysql-reservas:
+        condition: service_healthy
+      eventos-ms:
+        condition: service_started
+    environment:
+      DB_HOST: mysql-reservas
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: root
+      DB_NAME: reservas_db
+      PORT: 3001
+      CORS_ORIGIN: http://localhost:5173
+      EVENTOS_MS_URL: http://eventos-ms:3000
+    ports:
+      - "3001:3001"
+
+volumes:
+  mysql_eventos_data:
+  postgres_master_data:
+  mysql_reservas_data:

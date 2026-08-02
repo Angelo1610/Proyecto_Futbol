@@ -1,0 +1,172 @@
+@startuml ModeloER_SistemaReservasFutbol
+!theme plain
+hide circle
+skinparam linetype ortho
+skinparam roundcorner 8
+skinparam shadowing false
+
+skinparam entity {
+  BackgroundColor White
+  BorderColor #444444
+  FontSize 12
+}
+
+title Modelo Entidad-Relación — Sistema de Reservas de Partidos de Fútbol
+
+entity "Cliente" as Cliente {
+  * id : UUID <<PK>>
+  --
+  * dni : varchar <<unique>>
+  * firstName : varchar
+  middleName : varchar
+  * lastName : varchar
+  * email : varchar <<unique>>
+  * phone : varchar
+  * address : varchar
+  * nationality : varchar
+  * active : boolean
+  * createdAt : datetime
+}
+
+entity "Usuario" as Usuario {
+  * id : UUID <<PK, FK>>
+  --
+  * username : varchar <<unique>>
+  * passwordHash : varchar
+  * active : boolean
+  * tokenVersion : bigint
+  lastLogin : datetime
+  * createdAt : datetime
+}
+
+entity "Rol" as Rol {
+  * id : UUID <<PK>>
+  --
+  * name : varchar <<unique>>
+  description : text
+  * active : boolean
+  * createdAt : datetime
+  updatedAt : datetime
+}
+
+entity "UsuarioRol" as UsuarioRol {
+  * userId : UUID <<PK, FK>>
+  * roleId : UUID <<PK, FK>>
+  --
+  * active : boolean
+}
+
+entity "Parametro" as Parametro {
+  * id : UUID <<PK>>
+  --
+  * clave : varchar <<unique>>
+  * valor : varchar
+  descripcion : text
+  * active : boolean
+}
+
+entity "Escenario" as Escenario {
+  * id : UUID <<PK>>
+  --
+  * nombre : varchar
+  * descripcion : varchar
+  * ubicacion : varchar
+  * capacidad : int
+}
+
+entity "Seccion" as Seccion {
+  * id : UUID <<PK>>
+  --
+  * nombre : varchar
+  descripcion : varchar
+  * capacidad : int
+  * tipo : enum(PALCOS, GENERAL, PREFERENCIA, TRIBUNAS)
+  * multiplicador : decimal(4,2)
+  * escenarioId : UUID <<FK>>
+}
+
+entity "Fila" as Fila {
+  * id : UUID <<PK>>
+  --
+  * nombre : varchar
+  descripcion : varchar
+  * capacidad : int
+  * seccionId : UUID <<FK>>
+}
+
+entity "Asiento" as Asiento {
+  * id : UUID <<PK>>
+  --
+  * numero : varchar
+  * tipo : enum(NORMAL, PREFERENCIAL)
+  * estado : enum(DISPONIBLE, RESERVADO, VENDIDO)
+  * filaId : UUID <<FK>>
+}
+
+entity "Evento" as Evento {
+  * id : UUID <<PK>>
+  --
+  * nombre : varchar
+  * descripcion : varchar
+  * fecha : date
+  * hora : time
+  * estado : enum(PROGRAMADO, EN_CURSO, FINALIZADO, CANCELADO)
+  * precioBase : decimal(10,2)
+  imagenUrl : varchar
+  * escenarioId : UUID <<FK>>
+}
+
+entity "Reserva" as Reserva {
+  * id : UUID <<PK>>
+  --
+  * usuarioId : UUID <<FK>>
+  * eventoId : UUID <<FK>>
+  * eventoNombre : varchar
+  * eventoFechaHora : varchar
+  * estadioNombre : varchar
+  * estado : enum(PENDIENTE, CONFIRMADA, CANCELADA, EXPIRADA)
+  * fechaReserva : datetime
+  expiraEn : datetime
+  * montoTotal : decimal(10,2)
+  * detalleAsientos : json
+}
+
+entity "Ticket" as Ticket {
+  * id : UUID <<PK>>
+  --
+  * codigo : varchar <<unique>>
+  * reservaId : UUID <<FK>>
+  * usuarioId : UUID <<FK>>
+  * asientoId : UUID <<FK>>
+  * precio : decimal(10,2)
+  * estado : enum(ACTIVO, USADO, CANCELADO)
+  * eventoNombre : varchar
+  * eventoFechaHora : varchar
+  * estadioNombre : varchar
+  * zona : varchar
+  * numeroAsiento : varchar
+}
+
+' ======================================================================
+' RELACIONES
+' ======================================================================
+Cliente ||--|| Usuario     : "1 cliente = 1 usuario"
+Usuario ||--o{ UsuarioRol  : "tiene"
+Rol     ||--o{ UsuarioRol  : "asignado a"
+
+Escenario ||--o{ Seccion   : "contiene"
+Seccion   ||--o{ Fila      : "contiene"
+Fila      ||--o{ Asiento   : "contiene"
+Escenario ||--o{ Evento    : "es sede de"
+
+Usuario ||--o{ Reserva     : "realiza"
+Evento  ||--o{ Reserva     : "se reserva para"
+Reserva ||--o{ Ticket      : "genera"
+Asiento ||--o{ Ticket      : "identifica"
+
+legend right
+  ||--o{  =  1 a muchos
+  ||--||  =  1 a 1
+endlegend
+
+@enduml
